@@ -1,4 +1,6 @@
+import pdb
 from openai import OpenAI
+import subprocess
 
 #OpenAI Init
 client = OpenAI()
@@ -32,14 +34,18 @@ def validate_python_file_extension(file_name):
   
   return file_name
 
-#Remove headers and footers of gpt prompt from file in case of code snippet returned from chat
+#Remove headers and footers of gpt prompt in case code snippet returned
 def clean_prompt_response(response_content):
   cleaned_response = '\n'.join(response_content.splitlines()[1:-1])
   
   return cleaned_response
 
-#Exmple prompt: "Create a python program that checks if a number is prime. Do not write any explanations, just show me the code itself to put in a file." 
+#Exmple prompt: "Create a python program that checks if a number is prime. Do not write any explanations, just show me the code itself to put in a file. Also please include running unit tests with asserts that check the logic of the program. Make sure to also check interesting edge cases. There should be at least 10 different unit tests"
 request_input = input("Enter GPT Prompt: \n")
 gpt_response = openai_create_request(request_input)
 
-write_to_file("generatedcode", gpt_response) 
+generated_file_name = "generatedcode.py"
+write_to_file(generated_file_name, gpt_response)
+
+file_path = "./generatedcode.py"
+subprocess.run(["python", file_path])
