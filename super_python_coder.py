@@ -3,7 +3,7 @@ from openai import OpenAI
 import subprocess
 import random
 
-#ProgramS List Params
+#Programs List Params
 PROGRAMS_LIST=[
   '''Given two strings str1 and str2, prints all interleavings of the given
   two strings. You may assume that all characters in both strings are
@@ -28,29 +28,31 @@ PROGRAMS_LIST=[
 
 #OpenAI Init
 client = OpenAI()
+client_messages = [{"role": "system", "content": "You are a helpful assistant."}]
 
-def openai_create_request(prompt):
+
+def openai_request(prompt):
+  latest_message = { "role": "user", "content": prompt }
+  client_messages.append(latest_message)
+
   completion = client.chat.completions.create(
       model="gpt-4o-mini",
-      messages=[
-          {"role": "system", "content": "You are a helpful assistant."},
-          {
-              "role": "user",
-              "content": prompt
-          }
-      ]
+      messages=client_messages
   )
   
-  return completion.choices[0].message.content
+  chat_response = completion.choices[0].message.content
+  client_messages.append({"role": "assistant", "content": chat_response})
+  
+  return chat_response
 
 def super_python_coder_gpt_response(request_input):
   guidelines_prompt = '''based on user input, Do not write any explanations, just show me the code itself to put in a file.
   Also please include running unit tests with asserts that check the logic of the program. 
   Make sure to also check interesting edge cases. There should be at least 10 different unit tests, do not run the tests, run the main logic only'''
   if request_input != "":
-    return openai_create_request(request_input + guidelines_prompt)
+    return openai_request(request_input + guidelines_prompt)
   
-  return openai_create_request(random.choice(PROGRAMS_LIST) + guidelines_prompt)
+  return openai_request(random.choice(PROGRAMS_LIST) + guidelines_prompt)
 
 def write_to_file(file_name, txt_content):
   fixed_file_name = validate_python_file_extension(file_name)
@@ -67,7 +69,7 @@ def validate_python_file_extension(file_name):
   
   return file_name
 
-#Remove headers and footers of gpt prompt in code snippet return
+#Remove headers and footers of gpt output in code snippet return
 def clean_prompt_response(response_content):
   cleaned_response = '\n'.join(response_content.splitlines()[1:-1])
   
@@ -80,8 +82,19 @@ def generate_process_file(gpt_response):
 
   return file_path
 
+def subprocess_run_logic(file_path, retries_num):
+  while(retries_num <= 5):
+    try:
+      subprocess.run(["python", file_path])
+      break
+
+    except Exception as error_message:
+      updated_response = openai_request(f"please fix the code based on the following error: {error_message}")
+      generate_process_file(updated_response)
+      subprocess_run_logic(file_path, retries_num + 1)
+
 #Exmple prompt: "Create a python program that checks if a number is prime."
 request_input = input("I’m Super Python Coder. Tell me, which program would you like me to code for you? If you don't have an idea,just press enter and I will choose a random program to code: \n")
 gpt_response = super_python_coder_gpt_response(request_input)
 file_path = generate_process_file(gpt_response)
-subprocess.run(["python", file_path])
+subprocess_run_logic(file_path, retries_num=0)
