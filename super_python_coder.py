@@ -4,6 +4,11 @@ import subprocess
 import random
 
 #Programs List Params
+GUIDELINES_PROMPT = '''based on user input, Do not write any explanations, just show me the code itself to put in a file.
+Also please include running unit tests with asserts that check the logic of the program. 
+Make sure to also check interesting edge cases. There should be at least 10 different unit tests'''
+  
+
 PROGRAMS_LIST=[
   '''Given two strings str1 and str2, prints all interleavings of the given
   two strings. You may assume that all characters in both strings are
@@ -23,7 +28,7 @@ PROGRAMS_LIST=[
   "A program that checks if a number is a palindrome", #PROGRAM 2
   "A program that finds the kth smallest element in a given binary search tree." #PROGRAM 3
   "A program that writes the sum of isopsephy of a given sentence", #PROGRAM 4 - Geometria (hebrew)
-  "A program that is a Soduko Validator - make user enter a 9x9 Sudoku grid row by row (use 0 for empty cells)" #PROGRAM 5
+  "A program that calculates how many saturdays i have been going through since an inputed year" #PROGRAM 5
 ]
 
 #OpenAI Init
@@ -46,13 +51,10 @@ def openai_request(prompt):
   return chat_response
 
 def super_python_coder_gpt_response(request_input):
-  guidelines_prompt = '''based on user input, Do not write any explanations, just show me the code itself to put in a file.
-  Also please include running unit tests with asserts that check the logic of the program. 
-  Make sure to also check interesting edge cases. There should be at least 10 different unit tests, do not run the tests, run the main logic only'''
   if request_input != "":
-    return openai_request(request_input + guidelines_prompt)
+    return openai_request(request_input + GUIDELINES_PROMPT)
   
-  return openai_request(random.choice(PROGRAMS_LIST) + guidelines_prompt)
+  return openai_request(random.choice(PROGRAMS_LIST) + GUIDELINES_PROMPT)
 
 def write_to_file(file_name, txt_content):
   fixed_file_name = validate_python_file_extension(file_name)
@@ -83,15 +85,17 @@ def generate_process_file(gpt_response):
   return file_path
 
 def subprocess_run_logic(file_path, retries_num):
-  while(retries_num <= 5):
-    try:
-      subprocess.run(["python", file_path])
-      break
-
-    except Exception as error_message:
-      updated_response = openai_request(f"please fix the code based on the following error: {error_message}")
-      generate_process_file(updated_response)
-      subprocess_run_logic(file_path, retries_num + 1)
+  if retries_num > 5: 
+    print("Code generation FAILED")
+    return
+  
+  try:
+    subprocess.run(["python", file_path], check=True)
+ 
+  except subprocess.SubprocessError as error_message:
+    updated_response = openai_request(f"please fix the code based on the following error: {error_message} {GUIDELINES_PROMPT}")
+    generate_process_file(updated_response)
+    subprocess_run_logic(file_path, retries_num + 1)
 
 #Exmple prompt: "Create a python program that checks if a number is prime."
 request_input = input("I’m Super Python Coder. Tell me, which program would you like me to code for you? If you don't have an idea,just press enter and I will choose a random program to code: \n")
