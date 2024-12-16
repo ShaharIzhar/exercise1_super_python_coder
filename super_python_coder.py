@@ -2,12 +2,13 @@ import pdb
 from openai import OpenAI
 import subprocess
 import random
+import time
 
 #Programs List Params
 GUIDELINES_PROMPT = '''based on user input, Do not write any explanations, just show me the code itself to put in a file.
 Also please include running unit tests with asserts that check the logic of the program. 
 Make sure to also check interesting edge cases. There should be at least 10 different unit tests'''
-  
+
 
 PROGRAMS_LIST=[
   '''Given two strings str1 and str2, prints all interleavings of the given
@@ -90,15 +91,38 @@ def subprocess_run_logic(file_path, retries_num):
     return
   
   try:
+    start_time =  time.time()
     subprocess.run(["python", file_path], check=True)
+    end_time = time.time()
+    elapsed_time=end_time - start_time
+    if(elapsed_time): return elapsed_time
  
   except subprocess.SubprocessError as error_message:
+    print(f"code generation unsuccessfull - trying again - ({retries_num})")
     updated_response = openai_request(f"please fix the code based on the following error: {error_message} {GUIDELINES_PROMPT}")
     generate_process_file(updated_response)
     subprocess_run_logic(file_path, retries_num + 1)
+
+def optimized_code_runner():
+  updated_code = openai_request("great, now run the same unit tests but make the code more efficient")
+  generate_process_file(updated_code)
+
+  elapsed_time = subprocess_run_logic(file_path, retries_num=0)
+  return elapsed_time
+
+def elapsed_time_handler(before_elapsed_time, improved_elapsed_time):
+    if(elapsed_time > improved_elapsed_time):
+      print(f"Code running time optimized! It now runs in {improved_elapsed_time} milliseconds, while before it was {elapsed_time} milliseconds")
+
 
 #Exmple prompt: "Create a python program that checks if a number is prime."
 request_input = input("I’m Super Python Coder. Tell me, which program would you like me to code for you? If you don't have an idea,just press enter and I will choose a random program to code: \n")
 gpt_response = super_python_coder_gpt_response(request_input)
 file_path = generate_process_file(gpt_response)
-subprocess_run_logic(file_path, retries_num=0)
+
+elapsed_time = subprocess_run_logic(file_path, retries_num=0)
+if(elapsed_time):
+  improved_elapsed_time = subprocess_run_logic(file_path, retries_num=0)
+  elapsed_time_handler(elapsed_time, improved_elapsed_time)
+
+
