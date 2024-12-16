@@ -3,12 +3,12 @@ from openai import OpenAI
 import subprocess
 import random
 import time
+import pylint
 
 #Programs List Params
 GUIDELINES_PROMPT = '''based on user input, Do not write any explanations, just show me the code itself to put in a file.
 Also please include running unit tests with asserts that check the logic of the program. 
 Make sure to also check interesting edge cases. There should be at least 10 different unit tests'''
-
 
 PROGRAMS_LIST=[
   '''Given two strings str1 and str2, prints all interleavings of the given
@@ -114,6 +114,23 @@ def elapsed_time_handler(before_elapsed_time, improved_elapsed_time):
     if(elapsed_time > improved_elapsed_time):
       print(f"Code running time optimized! It now runs in {improved_elapsed_time} milliseconds, while before it was {elapsed_time} milliseconds")
 
+def lint_error_checker(file_path):
+  result = subprocess.run(
+            ["pylint", file_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+  if result.returncode == 0: return True
+  else: return False
+
+def lint_code_optimizer(file_path, retries_num):
+  if not lint_error_checker(file_path): return "Amazing. No lint errors/warnings"
+  if retries_num > 3: return "There are still lint errors/warnings"
+
+  updated_response = openai_request(f"please check the code for pylint errors, if it has lint errors, fix them. {GUIDELINES_PROMPT}")
+  generate_process_file(updated_response)
+  lint_code_optimizer(file_path, retries_num + 1)
 
 #Exmple prompt: "Create a python program that checks if a number is prime."
 request_input = input("I’m Super Python Coder. Tell me, which program would you like me to code for you? If you don't have an idea,just press enter and I will choose a random program to code: \n")
@@ -125,4 +142,5 @@ if(elapsed_time):
   improved_elapsed_time = subprocess_run_logic(file_path, retries_num=0)
   elapsed_time_handler(elapsed_time, improved_elapsed_time)
 
-
+lint_status = lint_code_optimizer(file_path, retries_num=0)
+print(lint_status)
