@@ -3,6 +3,8 @@ from openai import OpenAI
 import subprocess
 import random
 import time
+from colorama import init, Fore, Back, Style
+import tqdm
 import pylint
 
 #Programs List Params
@@ -87,7 +89,7 @@ def generate_process_file(gpt_response):
 
 def subprocess_run_logic(file_path, retries_num):
   if retries_num > 5: 
-    print("Code generation FAILED")
+    print(Fore.RED + "Code generation FAILED" + Fore.RESET)
     return
   
   try:
@@ -98,7 +100,7 @@ def subprocess_run_logic(file_path, retries_num):
     if(elapsed_time): return elapsed_time
  
   except subprocess.SubprocessError as error_message:
-    print(f"code generation unsuccessfull - trying again - ({retries_num})")
+    print(Fore.YELLOW + f"code generation unsuccessfull - trying again - ({retries_num})" + Fore.RESET)
     updated_response = openai_request(f"please fix the code based on the following error: {error_message} {GUIDELINES_PROMPT}")
     generate_process_file(updated_response)
     subprocess_run_logic(file_path, retries_num + 1)
@@ -125,15 +127,15 @@ def lint_error_checker(file_path):
   else: return False
 
 def lint_code_optimizer(file_path, retries_num):
-  if not lint_error_checker(file_path): return "Amazing. No lint errors/warnings"
-  if retries_num > 3: return "There are still lint errors/warnings"
+  if not lint_error_checker(file_path): return Fore.GREEN + "Amazing. No lint errors/warnings" + Fore.RESET
+  if retries_num > 3: return Fore.YELLOW + "There are still lint errors/warnings"
 
   updated_response = openai_request(f"please check the code for pylint errors, if it has lint errors, fix them. {GUIDELINES_PROMPT}")
   generate_process_file(updated_response)
   lint_code_optimizer(file_path, retries_num + 1)
 
 #Exmple prompt: "Create a python program that checks if a number is prime."
-request_input = input("I’m Super Python Coder. Tell me, which program would you like me to code for you? If you don't have an idea,just press enter and I will choose a random program to code: \n")
+request_input = input(Fore.GREEN + "I’m Super Python Coder. Tell me, which program would you like me to code for you? If you don't have an idea,just press enter and I will choose a random program to code: \n" + Fore.RESET)
 gpt_response = super_python_coder_gpt_response(request_input)
 file_path = generate_process_file(gpt_response)
 
