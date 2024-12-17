@@ -4,8 +4,7 @@ import subprocess
 import random
 import time
 from colorama import init, Fore, Back, Style
-import tqdm
-import pylint
+from tqdm import tqdm
 
 #Programs List Params
 GUIDELINES_PROMPT = '''based on user input, Do not write any explanations, just show me the code itself to put in a file.
@@ -97,7 +96,7 @@ def subprocess_run_logic(file_path, retries_num):
     subprocess.run(["python", file_path], check=True)
     end_time = time.time()
     elapsed_time=end_time - start_time
-    if(elapsed_time): return elapsed_time
+    if(elapsed_time): return round(elapsed_time, 4)
  
   except subprocess.SubprocessError as error_message:
     print(Fore.YELLOW + f"code generation unsuccessfull - trying again - ({retries_num})" + Fore.RESET)
@@ -135,14 +134,22 @@ def lint_code_optimizer(file_path, retries_num):
   lint_code_optimizer(file_path, retries_num + 1)
 
 #Exmple prompt: "Create a python program that checks if a number is prime."
-request_input = input(Fore.GREEN + "I’m Super Python Coder. Tell me, which program would you like me to code for you? If you don't have an idea,just press enter and I will choose a random program to code: \n" + Fore.RESET)
-gpt_response = super_python_coder_gpt_response(request_input)
-file_path = generate_process_file(gpt_response)
+code_generation_total_steps = 3
+with tqdm(total=code_generation_total_steps, desc="Code Generation Progress", ncols=100, dynamic_ncols=True) as pbar:
+  request_input = input(Fore.GREEN + "I’m Super Python Coder. Tell me, which program would you like me to code for you? If you don't have an idea,just press enter and I will choose a random program to code: \n" + Fore.RESET)
+  pbar.update(1)
+  pbar.set_description("Contacting Chat...")
+  gpt_response = super_python_coder_gpt_response(request_input)
+  pbar.update(1)
+  pbar.set_description("Updating code locally...")
+  file_path = generate_process_file(gpt_response)
+  pbar.update(1)
 
+print("\n\n Running Code:")
 elapsed_time = subprocess_run_logic(file_path, retries_num=0)
 if(elapsed_time):
   improved_elapsed_time = subprocess_run_logic(file_path, retries_num=0)
   elapsed_time_handler(elapsed_time, improved_elapsed_time)
 
-lint_status = lint_code_optimizer(file_path, retries_num=0)
-print(lint_status)
+  lint_status = lint_code_optimizer(file_path, retries_num=0)
+  print(lint_status)
