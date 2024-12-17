@@ -7,7 +7,7 @@ from colorama import init, Fore, Back, Style
 from tqdm import tqdm
 
 #Programs List Params
-GUIDELINES_PROMPT = '''based on user input, Do not write any explanations, just show me the code itself to put in a file.
+GUIDELINES_PROMPT = '''Do not write any explanations, just show me the code itself to put in a file.
 Also please include running unit tests with asserts that check the logic of the program. 
 Make sure to also check interesting edge cases. There should be at least 10 different unit tests'''
 
@@ -144,8 +144,9 @@ with tqdm(total=code_generation_total_steps, desc="Code Generation Progress", nc
   pbar.set_description("Updating code locally...")
   file_path = generate_process_file(gpt_response)
   pbar.update(1)
+  pbar.set_description("Extracting")
 
-print("\n\n Running Code:")
+print("\n\nRunning Code:")
 elapsed_time = subprocess_run_logic(file_path, retries_num=0)
 if(elapsed_time):
   improved_elapsed_time = subprocess_run_logic(file_path, retries_num=0)
